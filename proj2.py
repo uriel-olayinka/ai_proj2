@@ -52,10 +52,52 @@ class SudokuMineSolver:
         return (row // 3) * 3 + (col // 3)
 
     def check_row_constraint(self, row, assignment):
-        pass
+        mines = 0
+        unassigned = 0
+        
+        for c in range(9):
+            var = (row, c)
+            if var in self.variables:
+                if var in assignment:
+                    mines += assignment[var]
+                else:
+                    unassigned += 1
+        
+        # Cannot exceed 3 mines
+        if mines > 3:
+            return False
+        
+        # If all variables in row are assigned, must have exactly 3 mines
+        if unassigned == 0 and mines != 3:
+            return False
+        
+        # Check if remaining unassigned cells can still reach exactly 3
+        if mines + unassigned < 3:
+            return False
+        
+        return True
 
     def check_col_constraint(self, col, assignment):
-        pass
+        mines = 0
+        assigned_cells = 0
+        
+        for r in range(9):
+            var = (r, col)
+            if var in assignment:
+                assigned_cells += 1
+                mines += assignment[var]
+        
+        # Cannot exceed 3 mines
+        if mines > 3:
+            return False
+        
+        # If all cells in column that are variables are assigned, must have exactly 3 mines
+        if assigned_cells == len([1 for r in range(9) if (r, col) in self.variables]):
+            if mines != 3:
+                return False
+        
+        return True
+
 
     def check_block_constraint(self, row, col, assignment):
         pass
@@ -89,10 +131,66 @@ class SudokuMineSolver:
         return True
 
     def select_unassigned_variable(self, assignment):
-        pass
+        unassigned = [v for v in self.variables if v not in assignment]
+        
+        if not unassigned:
+            return None
+        
+        min_domain_size = min(len(self.domains[v]) for v in unassigned)
+        mrv_vars = [v for v in unassigned if len(self.domains[v]) == min_domain_size]
+        
+        if len(mrv_vars) == 1:
+            return mrv_vars[0]
+        
+        best_var = None
+        max_degree = -1
+        
+        for v in mrv_vars:
+            degree = self.count_constraints(v, assignment)
+            if degree > max_degree:
+                max_degree = degree
+                best_var = v
+        
+        return best_var
 
     def count_constraints(self, var, assignment):
-        pass
+        row, col = var
+        constrained_vars = set()
+        
+        # Row constraint neighbors
+        for c in range(9):
+            v = (row, c)
+            if v in self.variables and v not in assignment and v != var:
+                constrained_vars.add(v)
+        
+        # Column constraint neighbors
+        for r in range(9):
+            v = (r, col)
+            if v in self.variables and v not in assignment and v != var:
+                constrained_vars.add(v)
+        
+        # Block constraint neighbors
+        block_row = (row // 3) * 3
+        block_col = (col // 3) * 3
+        for r in range(block_row, block_row + 3):
+            for c in range(block_col, block_col + 3):
+                v = (r, c)
+                if v in self.variables and v not in assignment and v != var:
+                    constrained_vars.add(v)
+        
+        # 8-neighbors constraint
+        for r in range(9):
+            for c in range(9):
+                if self.grid[r][c] > 0:  # Numbered cell
+                    neighbors = self.get_neighbors(r, c)
+                    if var in neighbors:
+                        # All neighbors of this numbered cell are constrained together
+                        for nr, nc in neighbors:
+                            v = (nr, nc)
+                            if v in self.variables and v not in assignment and v != var:
+                                constrained_vars.add(v)
+        
+        return len(constrained_vars)
 
     def forward_check(self, var, value, assignment):
         pass
@@ -108,6 +206,10 @@ class SudokuMineSolver:
         """
         Backtracking search algorithm
         """
+        print("Assignment size:", len(assignment), " out of ", len(self.variables))
+        var = self.select_unassigned_variable(assignment)
+        print("Selected var:", var)
+
         self.nodes_generated += 1
 
         # Check if assignment is complete
