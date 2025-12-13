@@ -100,10 +100,41 @@ class SudokuMineSolver:
 
 
     def check_block_constraint(self, row, col, assignment):
-        pass
+        br = (row // 3) * 3
+        bc = (col // 3) * 3
+        mines = 0
+        unknown = 0
+        for r in range(br, br + 3):
+            for c in range(bc, bc + 3):
+                v = (r, c)
+                if v in self.variables:
+                    if v in assignment:
+                        mines += assignment[v]
+                    else:
+                        unknown += 1
+        return mines <= 3 and mines + unknown >= 3 and (unknown > 0 or mines == 3)
+
 
     def check_numbered_constraints(self, var, value, assignment):
-        pass
+        for r in range(9):
+            for c in range(9):
+                required = self.grid[r][c]
+                if required <= 0:
+                    continue
+
+                mines = 0
+                unknown = 0
+                for nr, nc in self.get_neighbors(r, c):
+                    if (nr, nc) in assignment:
+                        mines += assignment[(nr, nc)]
+                    elif (nr, nc) in self.variables:
+                        unknown += 1
+
+                if mines > required:
+                    return False
+                if unknown == 0 and mines != required:
+                    return False
+        return True
 
     def is_consistent(self, var, value, assignment):
         """
@@ -193,7 +224,30 @@ class SudokuMineSolver:
         return len(constrained_vars)
 
     def forward_check(self, var, value, assignment):
-        pass
+        removed = {}
+        temp = assignment.copy()
+        temp[var] = value
+
+        for v in self.variables:
+            if v in assignment:
+                continue
+
+            to_remove = set()
+            for val in list(self.domains[v]):
+                if not self.is_consistent(v, val, temp):
+                    to_remove.add(val)
+
+            if to_remove:
+                removed[v] = to_remove
+                self.domains[v] -= to_remove
+                if not self.domains[v]:
+                    self.restore_domains(removed)
+                    return None
+        return removed
+
+    def restore_domains(self, removed):
+        for v, vals in removed.items():
+            self.domains[v] |= vals
 
     def restore_domains(self, removed):
         """
