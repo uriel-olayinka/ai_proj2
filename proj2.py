@@ -348,9 +348,9 @@ def main():
     import sys
 
     if len(sys.argv) != 3:
-        print("Usage: python sudoku_mine.py <input_file> <output_file>")
+        print("Usage: python proj2.py <input_file> <output_file>")
         print("\nExample:")
-        print("  python sudoku_mine.py Input1-new.txt Output1.txt")
+        print("  python proj2.py Input1.txt Output1.txt")
         sys.exit(1)
 
     input_file = sys.argv[1]
